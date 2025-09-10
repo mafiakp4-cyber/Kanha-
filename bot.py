@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Environment variables
-BOT_TOKEN = ("8134357026:AAHxf3ncIOk9J4iNg2UHQ7cxeIlcQfnmLfU")
+BOT_TOKEN = "8134357026:AAHxf3ncIOk9J4iNg2UHQ7cxeIlcQfnmLfU"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
