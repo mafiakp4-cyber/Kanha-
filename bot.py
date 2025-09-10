@@ -1,12 +1,14 @@
 import os
 import threading
+import io
 from pyrogram import Client, filters
 from flask import Flask
+from PIL import Image
 
 # 🔑 Config
-API_ID = int(os.environ.get("API_ID", "21302239"))        # my.telegram.org से
-API_HASH = os.environ.get("API_HASH", "1560930c983fbca6a1fcc8eab760d40d")  # my.telegram.org से
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8134357026:AAHxf3ncIOk9J4iNg2UHQ7cxeIlcQfnmLfU")  # BotFather से
+API_ID = int(os.environ.get("API_ID", "21302239"))
+API_HASH = os.environ.get("API_HASH", "1560930c983fbca6a1fcc8eab760d40d")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8134357026:AAHxf3ncIOk9J4iNg2UHQ7cxeIlcQfnmLfU")  # BotFather se
 
 # Pyrogram Client
 app = Client(
@@ -19,34 +21,48 @@ app = Client(
 # ✅ User thumbnail store
 user_thumbs = {}
 
-# Step 1: Thumbnail Save
+# ---------------- Thumbnail processing ----------------
+async def process_thumbnail(photo_file_id, client):
+    # Download original photo to memory
+    image_bytes = io.BytesIO()
+    await client.download_media(photo_file_id, file_name=image_bytes)
+    image_bytes.seek(0)
+
+    # Open with PIL
+    img = Image.open(image_bytes)
+    img = img.convert("RGB")
+    img.thumbnail((320, 320))  # Resize to 320x320 for Telegram
+
+    # Save compressed in memory
+    thumb_bytes = io.BytesIO()
+    img.save(thumb_bytes, format="JPEG", quality=85)
+    thumb_bytes.seek(0)
+    return thumb_bytes
+
+# ---------------- Step 1: Thumbnail Save ----------------
 @app.on_message(filters.photo & filters.private)
 async def save_thumb(client, message):
     user_id = message.from_user.id
-    photo = message.photo.file_id
+    thumb_bytes = await process_thumbnail(message.photo.file_id, client)
+    user_thumbs[user_id] = thumb_bytes
+    await message.reply_text("✅ Thumbnail सेव हो गया!\nअब कोई video भेजो।")
 
-    thumb_path = await client.download_media(photo, file_name=f"{user_id}.jpg")
-    user_thumbs[user_id] = thumb_path
-
-    await message.reply_text("✅ Thumbnail सेव हो गया!\nअब कोई MP4 video भेजो।")
-
-# Step 2: Video with new Thumbnail
+# ---------------- Step 2: Video with new Thumbnail ----------------
 @app.on_message(filters.video & filters.private)
 async def send_with_thumb(client, message):
     user_id = message.from_user.id
     if user_id not in user_thumbs:
-        return await message.reply_text("❌ पहले कोई thumbnail photo भेजो।")
+        return await message.reply_text("❌ पहले कोई thumbnail भेजो।")
 
-    thumb_path = user_thumbs[user_id]
+    thumb_bytes = user_thumbs[user_id]
 
-    # Processing message
     status = await message.reply_text("⏳ Processing...")
 
     # Send video with custom thumbnail
     await client.send_video(
         chat_id=message.chat.id,
         video=message.video.file_id,
-        thumb=thumb_path,
+        thumb=thumb_bytes,
         caption="✅ Done! Thumbnail changed."
     )
 
