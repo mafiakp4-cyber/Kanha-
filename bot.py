@@ -5,7 +5,7 @@ from flask import Flask
 from PIL import Image
 
 # 🔑 Config
-API_ID = int(os.environ.get("API_ID", "21302239")
+API_ID = int(os.environ.get("API_ID", "21302239")) 
 API_HASH = os.environ.get("API_HASH", "1560930c983fbca6a1fcc8eab760d40d")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8134357026:AAHxf3ncIOk9J4iNg2UHQ7cxeIlcQfnmLfU")
 
